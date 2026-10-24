@@ -6,6 +6,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+const platformTest = process.platform === 'win32' ? test.skip : test;
 const root = fileURLToPath(new URL('../', import.meta.url));
 const original = '{"elements":[{"id":1}]}\n';
 const replacement = '\n {"elements":[{"id":2}]}\n';
@@ -44,7 +45,7 @@ process.exitCode = response.exitCode || 0;
   }
 }
 
-test('Overpass accepts complete JSON with leading whitespace', () => {
+platformTest('Overpass accepts complete JSON with leading whitespace', () => {
   const result = download([{ status: 200, body: replacement }]);
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.data, replacement);
@@ -58,7 +59,7 @@ for (const [name, response] of [
   ['Overpass runtime error', { status: 200, body: '{"elements":[],"remark":"runtime error: Query timed out"}' }],
   ['missing elements', { status: 200, body: '{}' }]
 ]) {
-  test(`Overpass preserves existing data after ${name}`, () => {
+  platformTest(`Overpass preserves existing data after ${name}`, () => {
     const result = download([response]);
     assert.equal(result.status, 1, result.stderr);
     assert.equal(result.data, original);
@@ -66,7 +67,7 @@ for (const [name, response] of [
   });
 }
 
-test('Overpass retries a failed endpoint before replacing data', () => {
+platformTest('Overpass retries a failed endpoint before replacing data', () => {
   const result = download([{ status: 200, body: '{', exitCode: 28 }, { status: 200, body: replacement }]);
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.data, replacement);

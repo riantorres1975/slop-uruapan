@@ -15,7 +15,7 @@ test('geodata builds with default paths in a checkout containing spaces and non-
     for (const name of fs.readdirSync(path.join(root, 'tools'))) {
       if (name.endsWith('.mjs')) fs.copyFileSync(path.join(root, 'tools', name), path.join(dir, 'tools', name));
     }
-    fs.symlinkSync(path.join(root, 'tools/data'), path.join(dir, 'tools/data'), 'dir');
+    fs.symlinkSync(path.join(root, 'tools/data'), path.join(dir, 'tools/data'), process.platform === 'win32' ? 'junction' : 'dir');
     const env = { ...process.env };
     delete env.GEO_DATA;
     const result = spawnSync(process.execPath, ['--max-old-space-size=8192', path.join(dir, 'tools/build-geodata.mjs')], {

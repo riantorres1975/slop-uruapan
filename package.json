@@ -1,0 +1,16 @@
+{
+  "name": "slop-uruapan",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node tools/serve.mjs",
+    "build": "node tools/build-site.mjs",
+    "test": "node --test tests/*.test.cjs tests/*.test.mjs",
+    "test:browser": "playwright test",
+    "osm:fetch": "node tools/fetch-uruapan.mjs",
+    "osm:build": "node tools/build-uruapan.mjs"
+  },
+  "dependencies": { "three": "0.186.1" },
+  "devDependencies": { "@playwright/test": "1.56.1" }
+}

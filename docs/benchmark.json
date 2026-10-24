@@ -1,0 +1,42 @@
+{
+  "date": "2026-10-24T16:29:52.884Z",
+  "environment": "Windows 11, Edge headless, 1920x1080, calidad media, escena inicial estática, sin garantía para otros equipos",
+  "samples": [
+    {
+      "fps": 100,
+      "calls": 621,
+      "triangles": 368291,
+      "geometries": 189,
+      "sectors": 32,
+      "people": 28,
+      "cars": 24
+    },
+    {
+      "fps": 100,
+      "calls": 1224,
+      "triangles": 370199,
+      "geometries": 189,
+      "sectors": 32,
+      "people": 28,
+      "cars": 24
+    },
+    {
+      "fps": 100,
+      "calls": 1827,
+      "triangles": 370199,
+      "geometries": 189,
+      "sectors": 32,
+      "people": 28,
+      "cars": 24
+    },
+    {
+      "fps": 100,
+      "calls": 2430,
+      "triangles": 370199,
+      "geometries": 189,
+      "sectors": 32,
+      "people": 28,
+      "cars": 24
+    }
+  ]
+}

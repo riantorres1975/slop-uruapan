@@ -2,8 +2,6 @@ import { test,expect } from '@playwright/test';
 test.beforeEach(async({page})=>{
   page.setDefaultTimeout(45000);page.__gpuErrors=[];
   page.on('console',m=>{if(m.type()==='error')page.__gpuErrors.push(m.text());});
-  // Hosted Linux runners have no hardware adapter; verify the supported software fallback there.
-  if(process.platform==='linux')await page.addInitScript(()=>Object.defineProperty(navigator,'gpu',{value:undefined,configurable:true}));
 });
 test.afterEach(async({page})=>{expect(page.__gpuErrors,'La consola de GPU debe estar libre de errores').toEqual([]);});
 test('Uruapan carga datos y geometrías reales sin errores',async({page})=>{

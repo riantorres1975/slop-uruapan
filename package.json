@@ -11,6 +11,10 @@
     "osm:fetch": "node tools/fetch-uruapan.mjs",
     "osm:build": "node tools/build-uruapan.mjs"
   },
-  "dependencies": { "three": "0.186.1" },
-  "devDependencies": { "@playwright/test": "1.56.1" }
+  "dependencies": {
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1"
+  }
 }

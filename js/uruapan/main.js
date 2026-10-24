@@ -3,6 +3,9 @@ import { UruapanControllers } from './controllers.js';
 import { UruapanCameras } from './cameras.js';
 import { SectorManager } from './world.js';
 import { Terrain } from './terrain.js';
+import { UruapanMap } from './map.js';
+import { UruapanTraffic } from './traffic.js';
+import { cityUniforms } from '../tsl-materials.js';
 
 async function boot(){
   const status=document.getElementById('loading-status');
@@ -22,7 +25,8 @@ async function boot(){
   const sectors=new SectorManager(scene,data,base,terrain),controllers=new UruapanControllers(scene,data,terrain),cameras=new UruapanCameras(renderer.domElement,controllers),camera=cameras.camera;
   const focus=controllers.getActiveEntity().position;
   for(let i=0;i<5;i++){status.textContent=`Construyendo sectores OSM… ${sectors.loaded.size}`;await sectors.update(focus);}
-  window.uruapan={renderer,scene,camera,data,sectors,terrain,focus,controllers,cameras,ready:false};
+  const traffic=new UruapanTraffic(scene,data,terrain),map=new UruapanMap(data,controllers,cameras,traffic);
+  window.uruapan={renderer,scene,camera,data,sectors,terrain,focus,controllers,cameras,traffic,map,ready:false};
   document.getElementById('data-summary').textContent=`${data.stats.roads} vías · ${data.stats.buildings} edificios OSM · ${data.stats.sectors} sectores. ${data.stats.provisionalHeights} alturas provisionales. ${data.stats.unsupportedGrades} vías elevadas/túneles omitidas hasta disponer de DEM.`;
   for(const id of ['settings','help'])document.getElementById(`${id}-open`).onclick=()=>document.getElementById(id).showModal();
   document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>document.getElementById(b.dataset.close).close());
@@ -34,18 +38,29 @@ async function boot(){
   const home=()=>{controllers.home();cameras.initialized=false;};document.getElementById('home').onclick=home;
   addEventListener('keydown',e=>{if(document.querySelector('dialog[open]')||['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName)||e.repeat)return;if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();const mode=({Digit1:'person',Digit2:'car',Digit3:'cyclist',Digit4:'helicopter'})[e.code];if(mode){controllers.chooseMode(mode);cameras.initialized=false;updateMode();}if(e.code==='KeyV')changeCamera();if(e.code==='KeyR')home();if(e.code==='KeyF'){document.getElementById('control-hint').textContent=controllers.enterExit();updateMode();}});
   for(const dialog of document.querySelectorAll('dialog')){dialog.addEventListener('close',()=>controllers.resetInput());}
+  document.getElementById('resolution').onchange=e=>{renderer.setPixelRatio(Number(e.target.value));renderer.setSize(innerWidth,innerHeight);};
+  document.getElementById('distance').onchange=e=>{sectors.radius=Number(e.target.value);};
+  document.getElementById('quality').onchange=e=>{const q=e.target.value;renderer.shadowMap.enabled=q!=='low';sectors.radius=q==='low'?360:q==='high'?1000:600;document.getElementById('distance').value=String(sectors.radius);traffic.targetCars=q==='low'?10:24;traffic.targetPeople=q==='low'?12:28;};
+  const dayColor=new THREE.Color(0xaac4cd),nightColor=new THREE.Color(0x122b40),sunDay=new THREE.Color(0xffe2b2),sunNight=new THREE.Color(0x9cbce6);
+  let night=0;
   let last=performance.now(),frames=0,timer=0;
   let elapsed=0,nextSectorUpdate=0;
+  // compileAsync temporarily changes renderer state. Finish before starting the render loop.
+  cameras.update(0,0);await renderer.compileAsync(scene,camera);last=performance.now();
   renderer.setAnimationLoop(now=>{const raw=Math.max(0,(now-last)/1000),dt=Math.min(raw,.05);last=now;frames++;timer+=raw;elapsed+=dt;
     const paused=Boolean(document.querySelector('dialog[open]'));if(paused)controllers.resetInput();
     controllers.update(paused||cameras.activePresetId==='free'?0:dt,elapsed);cameras.update(paused?0:dt,elapsed);
     const active=controllers.getActiveEntity();window.uruapan.focus=active.position;
+    traffic.update(paused?0:dt,elapsed,active.position,raw,active);map.update(now);
+    const time=document.getElementById('time').value,targetNight=time==='night'?1:time==='cycle'?(1-Math.cos(elapsed/60))*.5:0;night+=(targetNight-night)*(1-Math.exp(-dt*2));
+    sun.intensity=3.2*(1-night)+.45*night;sun.color.copy(sunDay).lerp(sunNight,night);hemi.intensity=2*(1-night)+.55*night;scene.background.copy(dayColor).lerp(nightColor,night);scene.fog.color.copy(scene.background);cityUniforms.uInteriorGlow.value=.4+night;sectors.materials.light.color.setHex(night>.3?0xffdf99:0xbbb7a0);
+    if(time==='day')sun.position.y=400;
     sun.position.set(active.position.x-180,280,active.position.z+120);sun.target.position.set(active.position.x,0,active.position.z);sun.target.updateMatrixWorld();
     renderer.render(scene,camera);if(now>nextSectorUpdate){sectors.update(cameras.activePresetId==='free'?camera.position:active.position);nextSectorUpdate=now+180;}
     if(timer>.5){document.getElementById('fps').textContent=Math.round(frames/timer);document.getElementById('speed').textContent=Math.round(Math.abs(active.speed)*3.6);document.getElementById('altitude').textContent=`${Math.round(active.position.y)} m`;frames=0;timer=0;}
     document.getElementById('sectors').textContent=`${sectors.loaded.size} sectores visibles · ${sectors.pending.size} en carga`;
   });
   addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});
-  await renderer.compileAsync(scene,camera);document.getElementById('loading').hidden=true;window.uruapan.ready=true;document.getElementById('welcome').showModal();
+  renderer.render(scene,camera);document.getElementById('loading').hidden=true;window.uruapan.ready=true;document.getElementById('welcome').showModal();
 }
 boot().catch(error=>{console.error(error);document.getElementById('loading-status').textContent=`No se pudo iniciar: ${error.message}. Recarga o usa un navegador con WebGPU/WebGL2.`;document.querySelector('#loading progress').hidden=true;});

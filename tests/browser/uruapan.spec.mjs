@@ -29,6 +29,13 @@ test('automóvil, bicicleta, helicóptero y entrada/salida',async({page})=>{
   await page.locator('[data-mode="helicopter"]').click();const altitude=await page.evaluate(()=>uruapan.controllers.entities.helicopter.position.y);await page.keyboard.down('Space');await expect.poll(()=>page.evaluate(()=>uruapan.controllers.entities.helicopter.position.y)).toBeGreaterThan(altitude+.1);await page.keyboard.up('Space');
   await page.keyboard.press('r');await expect.poll(()=>page.evaluate(()=>uruapan.controllers.entities.helicopter.speed)).toBe(0);expect(errors).toEqual([]);
 });
+test('minimapa, GPS, tráfico, destinos y ajustes gráficos',async({page})=>{
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});await page.goto('./');await page.waitForFunction(()=>window.uruapan?.ready);await page.locator('#start').click();
+  await expect.poll(()=>page.evaluate(()=>uruapan.traffic.carMesh.count)).toBeGreaterThan(0);
+  const before=await page.evaluate(()=>uruapan.traffic.cars.map(c=>[c.x,c.z]));await expect.poll(()=>page.evaluate(old=>uruapan.traffic.cars.some((c,i)=>Math.hypot(c.x-old[i][0],c.z-old[i][1])>.1),before)).toBe(true);
+  await page.keyboard.press('m');await expect(page.locator('#full-map')).toBeVisible();await page.locator('#destination').selectOption('2');await page.locator('#route').click();await expect(page.locator('#route-status')).toContainText('km');await page.screenshot({path:'docs/screenshots/uruapan-mapa.png'});await page.locator('#go').click();await expect(page.locator('#full-map')).not.toBeVisible();
+  await page.locator('#settings-open').click();await page.locator('#distance').selectOption('360');await page.locator('#resolution').selectOption('0.65');await page.locator('#time').selectOption('night');await page.locator('[data-close="settings"]').click();expect(await page.evaluate(()=>uruapan.sectors.radius)).toBe(360);expect(await page.evaluate(()=>uruapan.renderer.getPixelRatio())).toBe(.65);expect(errors).toEqual([]);
+});
 test('Nueva York original inicia con el motor fijado',async({page})=>{
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('new-york.html');await expect(page.locator('#loading-overlay')).toHaveClass(/hidden/,{timeout:150000});

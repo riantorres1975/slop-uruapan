@@ -12,7 +12,7 @@ async function boot(){
   const params=new URLSearchParams(location.search),initialQuality=['low','medium','high'].includes(params.get('quality'))?params.get('quality'):'medium';
   const initialResolution=['0.65','1','1.5'].includes(params.get('resolution'))?Number(params.get('resolution')):1;
   document.getElementById('quality').value=initialQuality;document.getElementById('resolution').value=String(initialResolution);
-  const renderer=new THREE.WebGPURenderer({antialias:initialQuality!=='low',powerPreference:'high-performance'});
+  const renderer=new THREE.WebGPURenderer({antialias:initialQuality!=='low',powerPreference:'high-performance',forceWebGL:params.get('renderer')==='webgl'});
   renderer.setPixelRatio(initialResolution);renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=initialQuality!=='low';
   renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.2;
   document.getElementById('viewport').append(renderer.domElement);await renderer.init();
@@ -68,4 +68,4 @@ async function boot(){
   addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});
   renderer.render(scene,camera);document.getElementById('loading').hidden=true;window.uruapan.ready=true;document.getElementById('welcome').showModal();
 }
-boot().catch(error=>{console.error(error);document.getElementById('loading-status').textContent=`No se pudo iniciar: ${error.message}. Recarga o usa un navegador con WebGPU/WebGL2.`;document.querySelector('#loading progress').hidden=true;});
+boot().catch(error=>{console.error(error);document.getElementById('loading-status').textContent='No se pudo iniciar la vista 3D. Prueba el modo compatible o actualiza el navegador.';document.querySelector('#loading progress').hidden=true;const link=document.getElementById('compatible'),url=new URL(location.href);url.searchParams.set('renderer','webgl');url.searchParams.set('quality','low');url.searchParams.set('resolution','0.65');link.href=url.href;link.hidden=false;});

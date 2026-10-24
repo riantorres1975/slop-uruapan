@@ -41,6 +41,8 @@ No se certifica un mínimo de FPS para todo hardware. Usa calidad baja, resoluci
 
 En equipos sin GPU dedicada puedes iniciar directamente con `?quality=low&resolution=0.65`: desactiva sombras y antialias desde el arranque, reduce la carga de sectores y limita la población. CI Linux usa este perfil; no representa una medición de rendimiento con GPU dedicada.
 
+Si WebGPU no puede iniciar en tu navegador, el botón **Probar modo compatible** abre `?renderer=webgl&quality=low&resolution=0.65`, que fuerza el fallback WebGL2 ya verificado. No requiere cambiar opciones internas del navegador.
+
 ## Instalación y ejecución — Windows 11
 
 Instala Git y Node.js 22 LTS o posterior. En PowerShell:
@@ -109,7 +111,7 @@ Playwright usa Microsoft Edge en Windows; en Linux instala Chromium con `npx pla
 
 ## Publicación en GitHub Pages
 
-El workflow `.github/workflows/pages.yml` prueba Windows/Linux, construye el sitio, ejecuta las pruebas de Uruapan en Chromium actualizado (WebGPU y fallback WebGL2 por software en el ejecutor Linux) y publica **sólo `dist/`** con GitHub Pages. Se activa con pushes a `feat/uruapan` o `main`, o manualmente. La validación visual completa de NYC también se ejecuta localmente y se conserva en la suite completa. Playwright debe mantenerse compatible con las APIs WebGPU del snapshot Three.js; Chromium 141 no aceptaba su descriptor de textura.
+El workflow `.github/workflows/pages.yml` prueba Windows/Linux, construye el sitio, ejecuta las pruebas de Uruapan en Chromium actualizado con WebGL2 y el perfil ligero en el ejecutor Linux y publica **sólo `dist/`** con GitHub Pages. Se activa con pushes a `feat/uruapan` o `main`, o manualmente. WebGPU, calidad media y la validación visual completa de NYC se prueban localmente en Edge. Playwright debe mantenerse compatible con las APIs del snapshot Three.js; Chromium 141 no aceptaba su descriptor de textura y el backend WebGPU por software perdió el dispositivo en el ejecutor Linux.
 
 En el fork, configura **Settings → Pages → Source: GitHub Actions**. Tras un workflow aprobado, la URL es:
 

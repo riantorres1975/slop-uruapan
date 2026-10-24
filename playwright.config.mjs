@@ -1,0 +1,2 @@
+import { defineConfig } from '@playwright/test';
+export default defineConfig({testDir:'./tests/browser',timeout:180000,workers:1,use:{baseURL:'http://127.0.0.1:4173/slop-uruapan/',viewport:{width:1920,height:1080},channel:'msedge',launchOptions:{args:['--enable-unsafe-webgpu','--ignore-gpu-blocklist']},screenshot:'only-on-failure'},webServer:{command:'node tools/serve.mjs',url:'http://127.0.0.1:4173/slop-uruapan/',reuseExistingServer:true}});

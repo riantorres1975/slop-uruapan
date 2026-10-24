@@ -1,0 +1,11 @@
+{
+  "stats": {
+    "roads": 1186,
+    "buildings": 67,
+    "areas": 39,
+    "sectors": 223,
+    "provisionalHeights": 60,
+    "unsupportedGrades": 34
+  },
+  "warnings": []
+}

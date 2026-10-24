@@ -19,6 +19,16 @@ test('caminar, saltar, colisiones y cambiar cámaras en Uruapan',async({page})=>
   const collision=await page.evaluate(()=>{const c=uruapan.controllers,b=uruapan.data.buildings.find(b=>b.ring.length===4),p=uruapan.controllers.entities.person.position.clone();const [a,d]=b.ring;p.set((a[0]+d[0])/2,.16,(a[1]+d[1])/2);const before=p.clone();c.resolveHorizontalCollision(p,.48);return p.distanceTo(before);});expect(collision).toBeGreaterThan(.1);
   await page.keyboard.press('r');expect(errors).toEqual([]);
 });
+test('automóvil, bicicleta, helicóptero y entrada/salida',async({page})=>{
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('./');await page.waitForFunction(()=>window.uruapan?.ready);await page.locator('#start').click();
+  await page.evaluate(()=>{const c=uruapan.controllers,p=c.entities.car.position;c.teleportActiveTo(p.x+3,p.z,c.entities.car.heading);});await page.keyboard.press('f');await expect(page.locator('#mode-label')).toHaveText('AUTOMÓVIL');
+  await page.keyboard.down('w');await expect.poll(()=>page.evaluate(()=>uruapan.controllers.entities.car.speed)).toBeGreaterThan(2);await page.keyboard.up('w');const speed=await page.evaluate(()=>uruapan.controllers.entities.car.speed);
+  await page.keyboard.down('s');await expect.poll(()=>page.evaluate(()=>uruapan.controllers.entities.car.speed)).toBeLessThan(speed);await page.keyboard.up('s');await page.keyboard.press('r');
+  await page.keyboard.press('f');await expect(page.locator('#mode-label')).toHaveText('A PIE');
+  await page.locator('[data-mode="cyclist"]').click();await page.keyboard.down('w');await expect.poll(()=>page.evaluate(()=>uruapan.controllers.entities.cyclist.speed)).toBeGreaterThan(1);await page.keyboard.up('w');
+  await page.locator('[data-mode="helicopter"]').click();const altitude=await page.evaluate(()=>uruapan.controllers.entities.helicopter.position.y);await page.keyboard.down('Space');await expect.poll(()=>page.evaluate(()=>uruapan.controllers.entities.helicopter.position.y)).toBeGreaterThan(altitude+.1);await page.keyboard.up('Space');
+  await page.keyboard.press('r');await expect.poll(()=>page.evaluate(()=>uruapan.controllers.entities.helicopter.speed)).toBe(0);expect(errors).toEqual([]);
+});
 test('Nueva York original inicia con el motor fijado',async({page})=>{
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('new-york.html');await expect(page.locator('#loading-overlay')).toHaveClass(/hidden/,{timeout:150000});

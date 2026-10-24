@@ -12,13 +12,15 @@ Entorno: Windows 11, PowerShell, Node.js, Microsoft Edge automatizado con Playwr
 | D · Vehículos | `c7d1e16` | 37 pruebas de controladores/luces; navegador verificó acelerar, frenar, entrar/salir, bicicleta, helicóptero y recuperación. |
 | E · Mapa y vida urbana | `a1fc5f1` | Pruebas de grafo/IA; navegador verificó mapa, ruta y ajustes. NYC abre al fijar el dev de Three.js requerido. Se corrigió una carrera de compilación/render. |
 | F · Sectores | `620bd59` | Tiles, cancelación, liberación de instancias, LOD de fachadas, presupuesto de agentes y esquema DEM validado. 7 pruebas de navegador aprobadas, incluyendo la consola de GPU. |
-| G · Publicación | Consultar `git log` | README, licencias, documentación de formato, build y workflow Pages. Resultado remoto depende de la ejecución registrada en Actions. |
+| G · Publicación | `4541ac9` | README, licencias, documentación de formato, build y workflow Pages; ajustes posteriores de CI en `430fd7f` y `7e0e6da`. Resultado remoto en GitHub Actions. |
 
 ## Cobertura
 
-Resultado local: **114 pruebas Node aprobadas, 7 omitidas explícitamente y 0 fallidas; 7 pruebas de navegador aprobadas**. Las pruebas Node verifican el código original y la importación de Uruapan: proyección y orientación, coordenadas inversas, alturas con unidades, huecos, grafos dirigidos, conectividad, reservas de cruces, DEM y archivos reales. En Windows se omiten explícitamente siete pruebas heredadas que requieren un Bash POSIX con ejecutables de prueba; el importador de Uruapan es Node multiplataforma. La prueba heredada de regeneración de Nueva York utiliza una junction en Windows para evitar privilegios de symlink.
+Resultado local: **114 pruebas Node aprobadas, 7 omitidas explícitamente y 0 fallidas; 8 pruebas de navegador aprobadas**. Las pruebas Node verifican el código original y la importación de Uruapan: proyección y orientación, coordenadas inversas, alturas con unidades, huecos, grafos dirigidos, conectividad, reservas de cruces, DEM y archivos reales. En Windows se omiten explícitamente siete pruebas heredadas que requieren un Bash POSIX con ejecutables de prueba; el importador de Uruapan es Node multiplataforma. La prueba heredada de regeneración de Nueva York utiliza una junction en Windows para evitar privilegios de symlink.
 
-Playwright ejecuta carga de Uruapan sin errores de JS/GPU, caminar/saltar/colisiones/cámaras, automóvil/bicicleta/helicóptero/entrada/salida, mapa/rutas/tráfico/ajustes, carga real de Nueva York, sectores/1440p y fallback WebGL2. Las capturas se generan desde el navegador real, no son renders promocionales. La ejecución completa debe volver a pasar después de cada cambio de renderer o pipeline.
+Playwright ejecuta carga de Uruapan sin errores de JS/GPU, caminar/saltar/colisiones/cámaras, automóvil/bicicleta/helicóptero/entrada/salida, mapa/rutas/tráfico/ajustes, carga real de Nueva York, sectores/1440p, fallback WebGL2 y perfil ligero por URL. Las capturas se generan desde el navegador real, no son renders promocionales. La ejecución completa debe volver a pasar después de cada cambio de renderer o pipeline.
+
+El primer intento de CI encontró un Chromium 141 incompatible con el descriptor de textura del Three.js original. Playwright se actualizó a 1.64.1. El perfil ligero de CI usa resolución 65 % y sin sombras; la prueba local por defecto conserva calidad media y resolución 100 %. La [medición local](benchmark.json) registró 100 FPS en cuatro muestras de la escena inicial a 1080p, con 32 sectores y 189 geometrías; no certifica otras zonas ni equipos.
 
 ## Límites de la validación
 

@@ -9,8 +9,11 @@ import { cityUniforms } from '../tsl-materials.js';
 
 async function boot(){
   const status=document.getElementById('loading-status');
-  const renderer=new THREE.WebGPURenderer({antialias:true,powerPreference:'high-performance'});
-  renderer.setPixelRatio(1);renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;
+  const params=new URLSearchParams(location.search),initialQuality=['low','medium','high'].includes(params.get('quality'))?params.get('quality'):'medium';
+  const initialResolution=['0.65','1','1.5'].includes(params.get('resolution'))?Number(params.get('resolution')):1;
+  document.getElementById('quality').value=initialQuality;document.getElementById('resolution').value=String(initialResolution);
+  const renderer=new THREE.WebGPURenderer({antialias:initialQuality!=='low',powerPreference:'high-performance'});
+  renderer.setPixelRatio(initialResolution);renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=initialQuality!=='low';
   renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.2;
   document.getElementById('viewport').append(renderer.domElement);await renderer.init();
   document.getElementById('renderer-label').textContent=renderer.backend.isWebGPUBackend?'WEBGPU':'WEBGL2';
@@ -23,9 +26,11 @@ async function boot(){
   const sun=new THREE.DirectionalLight(0xffe2b2,3.2);sun.position.set(-180,280,120);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);Object.assign(sun.shadow.camera,{left:-120,right:120,top:120,bottom:-120,near:1,far:800});sun.shadow.bias=-0.0003;scene.add(sun,sun.target);
   const ground=new THREE.Mesh(new THREE.PlaneGeometry(16000,16000),new THREE.MeshStandardNodeMaterial({color:0xb4ae9c,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-0.03;ground.receiveShadow=true;scene.add(ground);
   const sectors=new SectorManager(scene,data,base,terrain),controllers=new UruapanControllers(scene,data,terrain),cameras=new UruapanCameras(renderer.domElement,controllers),camera=cameras.camera;
+  sectors.radius=initialQuality==='low'?360:initialQuality==='high'?1000:600;document.getElementById('distance').value=String(sectors.radius);
   const focus=controllers.getActiveEntity().position;
   for(let i=0;i<5;i++){status.textContent=`Construyendo sectores OSM… ${sectors.loaded.size}`;await sectors.update(focus);}
   const traffic=new UruapanTraffic(scene,data,terrain),map=new UruapanMap(data,controllers,cameras,traffic);
+  traffic.maxCars=initialQuality==='low'?10:initialQuality==='high'?40:24;traffic.maxPeople=initialQuality==='low'?12:initialQuality==='high'?48:28;
   window.uruapan={renderer,scene,camera,data,sectors,terrain,focus,controllers,cameras,traffic,map,ready:false};
   document.getElementById('data-summary').textContent=`${data.stats.roads} vías · ${data.stats.buildings} edificios OSM · ${data.stats.sectors} sectores. ${data.stats.provisionalHeights} alturas provisionales. ${data.stats.unsupportedGrades} vías elevadas/túneles omitidas hasta disponer de DEM.`;
   for(const id of ['settings','help'])document.getElementById(`${id}-open`).onclick=()=>document.getElementById(id).showModal();

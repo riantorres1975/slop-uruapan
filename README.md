@@ -39,6 +39,8 @@ El tráfico y el GPS no implementan todas las restricciones de giro, señalizaci
 
 No se certifica un mínimo de FPS para todo hardware. Usa calidad baja, resolución 65 % o distancia 360 m si es necesario. Se recomienda un navegador actualizado con aceleración gráfica. La entrada NYC conserva su interfaz original en inglés; la interfaz de Uruapan está en español.
 
+En equipos sin GPU dedicada puedes iniciar directamente con `?quality=low&resolution=0.65`: desactiva sombras y antialias desde el arranque, reduce la carga de sectores y limita la población. CI Linux usa este perfil; no representa una medición de rendimiento con GPU dedicada.
+
 ## Instalación y ejecución — Windows 11
 
 Instala Git y Node.js 22 LTS o posterior. En PowerShell:

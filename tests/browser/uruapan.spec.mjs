@@ -2,6 +2,7 @@ import { test,expect } from '@playwright/test';
 test.beforeEach(async({page})=>{
   page.setDefaultTimeout(45000);page.__gpuErrors=[];
   page.on('console',m=>{if(m.type()==='error')page.__gpuErrors.push(m.text());});
+  if(process.platform==='linux')await page.addInitScript(()=>{const url=new URL(location.href);url.searchParams.set('quality','low');url.searchParams.set('resolution','0.65');history.replaceState(null,'',url);});
 });
 test.afterEach(async({page})=>{expect(page.__gpuErrors,'La consola de GPU debe estar libre de errores').toEqual([]);});
 test('Uruapan carga datos y geometrías reales sin errores',async({page})=>{
@@ -55,4 +56,8 @@ test('sectores descargan memoria, vuelven a cargar y soportan 1440p',async({page
 });
 test('fallback WebGL2 dibuja la ciudad sin errores de shader',async({page})=>{
   await page.addInitScript(()=>Object.defineProperty(navigator,'gpu',{value:undefined,configurable:true}));await page.goto('./');await page.waitForFunction(()=>window.uruapan?.ready);await page.locator('#start').click();await expect(page.locator('#renderer-label')).toHaveText('WEBGL2');await expect.poll(()=>page.evaluate(()=>uruapan.renderer.info.render.triangles)).toBeGreaterThan(0);await page.locator('[data-mode="car"]').click();await page.keyboard.press('v');await page.screenshot({path:'docs/screenshots/uruapan-webgl2.png'});
+});
+test('perfil ligero desde URL inicia sin sombras y con resolución reducida',async({page})=>{
+  await page.goto('./?quality=low&resolution=0.65');await page.waitForFunction(()=>window.uruapan?.ready);await page.locator('#start').click();
+  expect(await page.evaluate(()=>({shadows:uruapan.renderer.shadowMap.enabled,resolution:uruapan.renderer.getPixelRatio(),radius:uruapan.sectors.radius}))).toEqual({shadows:false,resolution:.65,radius:360});
 });

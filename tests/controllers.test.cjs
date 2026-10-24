@@ -19,13 +19,11 @@ function eventTarget() {
   };
 }
 
-function keyboardHarness(nyc = {}) {
+function keyboardHarness() {
   const window = eventTarget();
   const document = { ...eventTarget(), hidden: false };
   const config = {
-    streetZ: () => 0,
     isTypingInField: (event) => ['INPUT', 'SELECT'].includes(event.target?.tagName),
-    ...nyc
   };
   const { ThirdPersonControllerManager } = loadModule(source, {
     globals: { window, document },
@@ -36,7 +34,6 @@ function keyboardHarness(nyc = {}) {
       './actor-models.js': {},
       './pedestrians.js': {},
       './vehicle-lights.js': {},
-      './landmarks.js': {}
     }
   });
   // Exercise the production event handlers without constructing the scene's 3D models.
@@ -193,14 +190,10 @@ for (const mode of ['Person', 'Car', 'Cyclist', 'Helicopter']) {
   });
 }
 
-function teleportHarness(mode, colliders = [], shore = () => ({ westX: -500, eastX: 500 })) {
-  const harness = keyboardHarness({
-    ISLAND_BOUNDS: { minX: -500, maxX: 500, minZ: -500, maxZ: 500, sidewalkHeight: 0.22 },
-    CENTRAL_PARK_BOUNDS: { minX: 1000, maxX: 1100, minZ: 1000, maxZ: 1100 },
-    getIslandBoundsAtZ: shore,
-    blockAt: () => null
-  });
+function teleportHarness(mode, colliders = []) {
+  const harness = keyboardHarness();
   const { controller } = harness;
+  controller.world = { bounds: { minX: -500, maxX: 500, minZ: -500, maxZ: 500 }, groundHeight: () => 0 };
   const position = (x = 0, y = 0, z = 0) => ({ x, y, z, copy(p) { this.x = p.x; this.y = p.y; this.z = p.z; } });
   const pivot = () => ({ position: position(), rotation: { x: 0.1, y: 0, z: -0.2 } });
   const chase = { person: [4.3, 1.95], car: [6.9, 2.12], cyclist: [4.8, 2.05], helicopter: [11.4, 3.3] };
@@ -403,11 +396,10 @@ test('helicopter skids cannot pass through a roof below the body origin', () => 
   assert.notDeepEqual({ ...controller.teleportActiveTo(5, 5, 0, 10.2) }, { x: 5, z: 5 });
 });
 
-test('ground arrivals share movement shoreline limits while helicopters may remain above lower buildings', () => {
-  const shore = z => ({ westX: -40 + z * 0.05, eastX: 40 + z * 0.05 });
-  const { controller, ent } = teleportHarness('person', [], shore);
+test('las llegadas comparten los límites locales y los helicópteros pueden permanecer sobre edificios bajos', () => {
+  const { controller, ent } = teleportHarness('person');
   const result = controller.teleportActiveTo(1000, -1000);
-  assert.deepEqual({ ...result }, { x: 8.5, z: -470 });
+  assert.deepEqual({ ...result }, { x: 500, z: -500 });
   controller.resolveHorizontalCollision(ent.position, 0.48);
   assert.deepEqual([ent.position.x, ent.position.z], [result.x, result.z]);
 

@@ -29,7 +29,7 @@ import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometr
 // Realistic 3D Lofted Vehicle Geometry + TSL Materials (the skinned, animated people are in pedestrians.js)
 // Ported and adapted from Three.js webgpu_generator_city:
 // - LoftGeometry.js (skinning 3D cross-section rings with arc-length UVs, smooth seam normals & Newell caps)
-// - CarGenerator.js (lofted sedan/taxi/SUV/NYPD bodies with circular wheel arches, curved cabin windscreens,
+// - CarGenerator.js (lofted sedan/taxi/SUV/policía bodies with circular wheel arches, curved cabin windscreens,
 //   crowned roofs, LatheGeometry tyres & recessed 5-spoke alloy wheels, side mirrors, roof signs & TSL fascia/seams)
 
 const _vector = new THREE.Vector3();
@@ -197,7 +197,7 @@ function part(geometry, id) {
 // (monotone cubic splines) plus elliptical roundings into the nose and tail: rounded plan-view corners, a hood that
 // rolls down into the fascia, a tucked-in sill, crowned hood & deck, fender flares and circular wheel arches. A second,
 // open loft sits on the belt line as the glasshouse (raked windshield & backlight, tumblehome side glass, crowned roof
-// with rounded rails). All the detail (glass, seals, pillars, lamps, grilles, plates, door seams, NYPD & taxi liveries,
+// with rounded rails). All the detail (glass, seals, pillars, lamps, grilles, plates, door seams, policía & taxi liveries,
 // brake lights & turn signals) is painted by one TSL material from object-space position & normal, so each body type
 // stays a single instanced draw call.
 const CAR_PARTS = {
@@ -781,7 +781,7 @@ function buildRoofRails(spec) {
   return list;
 }
 
-// NYC medallion roof light: a lit, gently tapered box on a black mount
+// Luz de techo del vehículo urbano: a lit, gently tapered box on a black mount
 function taxiSignPlacement(spec) {
   const L = carLayout(spec);
   const cab = spec.cabin;
@@ -874,7 +874,7 @@ function buildCarProxyGeometry(spec) {
   return mergeGeometries(parts);
 }
 
-// NYPD roof light bar (red on the -x half, blue on the +x half) for a body spec's roof, lit by createLightbarMaterial
+// policía roof light bar (red on the -x half, blue on the +x half) for a body spec's roof, lit by createLightbarMaterial
 function buildLightbarGeometry(spec = BODY_SPECS.sedan) {
   const L = carLayout(spec);
   const cab = spec.cabin;
@@ -992,7 +992,7 @@ function carPlateTexture() {
 /**
  * Creates the TSL material for lofted vehicles.
  * Instanced traffic reads the per-instance `paintColor` (vec3) and `carState` (vec4: brake, left (+x) & right (-x)
- * turn signal, livery: 1 = NYPD) attributes; with a fixed `fixedColorHex` (the player's taxi, wheels) the state is the
+ * turn signal, livery: 1 = policía) attributes; with a fixed `fixedColorHex` (the player's taxi, wheels) the state is the
  * `material.userData.carState` uniform instead.
  * Every mask is built once and shared by the colour, roughness, metalness & emissive graphs (TSL turns nodes used
  * more than once into temporaries), so the fragment shader evaluates each SDF a single time.
@@ -1171,7 +1171,7 @@ function createLoftedCarMaterial(spec, fixedColorHex = null) {
   );
 
   // ---- Colour ---------------------------------------------------------------------------------------------------
-  // Liveries: NYPD (white with blue & light-blue side stripes, lettering on the front doors); the taxi's door badges
+  // Liveries: policía (white with blue & light-blue side stripes, lettering on the front doors); the taxi's door badges
   // and medallion number
   const isPolice = step(0.5, state.w).mul(isSide).mul(isBody);
   const doorMid = (spec.doors[0] + spec.doors[1]) / 2;
@@ -1511,7 +1511,7 @@ let _busLoftedMat = null;
  * - Continuous side window band with mullions, the driver's window, glazed curb-side front & rear doors
  * - MTA livery: pearl white with the vivid blue band & cyan ribbon below the windows and a dark skirt
  * - Headlamps, turn signals (per-instance `busState`: brake, left (+x), right (-x)), tail / brake light columns,
- *   NY plates; black trims & light-grey roof pods
+ *   matrículas provisionales; black trims & light-grey roof pods
  */
 function createLoftedBusMaterial() {
   if (_busLoftedMat) return _busLoftedMat;
@@ -1614,7 +1614,7 @@ function createLoftedBusMaterial() {
 }
 
 // ============================================================================
-// 5. 3D LOFTED MANHATTAN SIGHTSEEING HELICOPTER GEOMETRY & TSL MATERIAL
+// 5. 3D LOFTED URUAPAN TOURING HELICOPTER GEOMETRY & TSL MATERIAL
 // ============================================================================
 const HELI_PARTS = {
   FUSELAGE: 0,
@@ -1865,7 +1865,7 @@ let _heliLoftedMat = null;
  * Creates the TSL procedural material for the 3D Lofted Sightseeing Helicopter:
  * - Renders wrap-around panoramic windscreen, chin bubble windows, sightseeing cabin side windows,
  *   and overhead skylight glass using anti-aliased `roundedRect` SDFs with rubber seals & frame pillars.
- * - Renders a sleek flush executive NYC Sightseeing livery (Pearl Aviation White upper cabin,
+ * - Renders a sleek flush executive turística de Uruapan livery (Pearl Aviation White upper cabin,
  *   Deep Midnight Navy belly/tailboom, and a sweeping Metallic Gold & Crimson accent stripe).
  * - Renders slatted turbine air intakes on the engine cowling and high-visibility yellow tips on rotor blades.
  */
@@ -1924,7 +1924,7 @@ function createLoftedHelicopterMaterial() {
       .mul(isFuselage)
       .toVar();
 
-    // 2. Flush Executive NYC Sightseeing Livery (Aviation White + Midnight Navy + Sweeping Gold Ribbon)
+    // 2. Flush Executive turística de Uruapan Livery (Aviation White + Midnight Navy + Sweeping Gold Ribbon)
     const navyCurveY = float(1.00).add(p.z.mul(-0.085));
     const edgeW = max(fwidth(p.y), 0.008);
     const isLowerNavy = smoothstep(navyCurveY.add(edgeW), navyCurveY.sub(edgeW), p.y);

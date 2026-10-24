@@ -42,10 +42,10 @@ test('minimapa, GPS, tráfico, destinos y ajustes gráficos',async({page})=>{
   await page.keyboard.press('m');await expect(page.locator('#full-map')).toBeVisible();await page.locator('#destination').selectOption('2');await page.locator('#route').click();await expect(page.locator('#route-status')).toContainText('km');await page.screenshot({path:'docs/screenshots/uruapan-mapa.png'});await page.locator('#go').click();await expect(page.locator('#full-map')).not.toBeVisible();
   await page.locator('#settings-open').click();await page.locator('#distance').selectOption('360');await page.locator('#resolution').selectOption('0.65');await page.locator('#time').selectOption('night');await page.locator('[data-close="settings"]').click();expect(await page.evaluate(()=>uruapan.sectors.radius)).toBe(360);expect(await page.evaluate(()=>uruapan.renderer.getPixelRatio())).toBe(.65);expect(errors).toEqual([]);
 });
-test('Nueva York original inicia con el motor fijado',async({page})=>{
-  const errors=[];page.on('pageerror',e=>errors.push(e.message));
-  await page.goto('new-york.html');await expect(page.locator('#loading-overlay')).toHaveClass(/hidden/,{timeout:150000});
-  expect(errors).toEqual([]);await page.screenshot({path:'docs/screenshots/new-york.png'});
+test('la ruta anterior redirige al simulador de Uruapan',async({page})=>{
+  await page.goto('new-york.html');await page.waitForFunction(()=>window.uruapan?.ready);
+  await expect(page.locator('.brand h1')).toHaveText('SLOP URUAPAN');
+  expect(await page.evaluate(()=>uruapan.data.origin.lat)).toBe(19.42112);
 });
 test('sectores descargan memoria, vuelven a cargar y soportan 1440p',async({page})=>{
   await page.setViewportSize({width:2560,height:1440});await page.goto('./');await page.waitForFunction(()=>window.uruapan?.ready);await page.locator('#start').click();

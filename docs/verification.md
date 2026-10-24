@@ -1,29 +1,28 @@
-# Registro de verificación
+# Verificación de SLOP URUAPAN
 
-Entorno: Windows 11, PowerShell, Node.js, Microsoft Edge automatizado con Playwright. Fechas del snapshot: 24 de octubre de 2026 (UTC en `provenance.json`).
+La suite actual está dedicada a Uruapan. Los escenarios exclusivos del simulador anterior se retiraron junto con el código al que correspondían; se conservan en el historial Git.
 
-## Checkpoints
+## Código y datos
 
-| Entrega | Commit | Verificación realizada |
-| --- | --- | --- |
-| A · Preparación | `1ba797f` | Fork y remotos verificados; 106 pruebas originales aprobadas y 7 pruebas Bash omitidas en Windows. Entrada NYC independiente. |
-| B · Mapa OSM | `5535ed4` | 6 pruebas geográficas; build estático; navegador cargó sectores y geometrías; capturas iniciales. |
-| C · Exploración | `77085b4` | 48 pruebas de controladores/cámaras/teleports; navegador verificó caminar, saltar, colisión y cinco cámaras. |
-| D · Vehículos | `c7d1e16` | 37 pruebas de controladores/luces; navegador verificó acelerar, frenar, entrar/salir, bicicleta, helicóptero y recuperación. |
-| E · Mapa y vida urbana | `a1fc5f1` | Pruebas de grafo/IA; navegador verificó mapa, ruta y ajustes. NYC abre al fijar el dev de Three.js requerido. Se corrigió una carrera de compilación/render. |
-| F · Sectores | `620bd59` | Tiles, cancelación, liberación de instancias, LOD de fachadas, presupuesto de agentes y esquema DEM validado. 7 pruebas de navegador aprobadas, incluyendo la consola de GPU. |
-| G · Publicación | `4541ac9` | README, licencias, documentación de formato, build y workflow Pages; ajustes posteriores de CI en `430fd7f` y `7e0e6da`. Resultado remoto en GitHub Actions. |
+`npm test` verifica entrada, redirección histórica, movimiento, cámaras, controladores, colisiones, recuperación, luces, controles táctiles reutilizables, importación, proyección WGS84, alturas, huecos, grafos dirigidos, tráfico y muestreo DEM. La suite contiene 72 casos y no requiere Bash ni omite pruebas en Windows.
 
-## Cobertura
+`npm run build` genera el sitio. `npm run check:static` verifica el grafo completo de imports bajo `/slop-uruapan/`, los 223 sectores, las licencias y la ausencia de los datos de la ciudad anterior en el paquete. El runtime carga 23 módulos en lugar de los 59 anteriores.
 
-Resultado local: **114 pruebas Node aprobadas, 7 omitidas explícitamente y 0 fallidas; 8 pruebas de navegador aprobadas**. Las pruebas Node verifican el código original y la importación de Uruapan: proyección y orientación, coordenadas inversas, alturas con unidades, huecos, grafos dirigidos, conectividad, reservas de cruces, DEM y archivos reales. En Windows se omiten explícitamente siete pruebas heredadas que requieren un Bash POSIX con ejecutables de prueba; el importador de Uruapan es Node multiplataforma. La prueba heredada de regeneración de Nueva York utiliza una junction en Windows para evitar privilegios de symlink.
+## Navegador
 
-Playwright ejecuta carga de Uruapan sin errores de JS/GPU, caminar/saltar/colisiones/cámaras, automóvil/bicicleta/helicóptero/entrada/salida, mapa/rutas/tráfico/ajustes, carga real de Nueva York, sectores/1440p, fallback WebGL2 y perfil ligero por URL. Las capturas se generan desde el navegador real, no son renders promocionales. La ejecución completa debe volver a pasar después de cada cambio de renderer o pipeline.
+`npm run test:browser` usa Microsoft Edge en Windows y ejecuta ocho recorridos reales:
 
-El primer intento de CI encontró un Chromium 141 incompatible con el descriptor de textura del Three.js original. Playwright se actualizó a 1.64.1. El perfil ligero de CI usa resolución 65 % y sin sombras; la prueba local por defecto conserva calidad media y resolución 100 %. La [medición local](benchmark.json) registró 100 FPS en cuatro muestras de la escena inicial a 1080p, con 32 sectores y 189 geometrías; no certifica otras zonas ni equipos.
+1. Carga de Uruapan, datos y geometrías sin errores de JS ni GPU.
+2. Caminar, saltar, colisiones y cinco cámaras.
+3. Automóvil, bicicleta, helicóptero, frenado y entrada/salida.
+4. Minimapa, GPS, destinos, tráfico y ajustes.
+5. La URL histórica redirige a Uruapan y carga su origen WGS84.
+6. Descarga y recarga de sectores, liberación y viewport 1440p.
+7. Modo compatible WebGL2 accesible por URL.
+8. Perfil ligero con resolución reducida y sombras desactivadas.
 
-La GPU virtual Linux también perdió el dispositivo en Chromium actualizado. Los intentos gráficos remotos fallaron o se cancelaron: no se cuentan como aprobados. La publicación utiliza Node en ambos sistemas y `npm run check:static`, que verifica que los imports de ambas entradas, sectores y licencias existen dentro del subdirectorio de Pages. Las ocho pruebas gráficas aprobadas son las locales de Edge. El modo compatible también abrió la ciudad y permitió mover al personaje en una prueba local con SwiftShader.
+Las capturas se generan desde el simulador real. La comprobación del navegador captura tanto excepciones como errores de consola GPU. En el ejecutor Linux sin GPU dedicada, el modo gráfico virtual no se certifica: la publicación automática utiliza las pruebas Node de Windows/Linux y la validación del paquete estático. La verificación visual se ejecuta localmente en Edge.
 
-## Límites de la validación
+## Límites
 
-No se ha certificado un mínimo de FPS en hardware dedicado. El HUD mide el rendimiento real, que incluye compilación inicial y depende del adaptador GPU. No se han validado todos los navegadores, móviles, accesibilidad de cada entrada OSM, normativa vial completa, monumentos exactos ni terreno real. La vista de NYC conserva su interfaz en inglés; la interfaz propia de Uruapan está en español.
+El terreno sigue plano, los monumentos requieren modelos manuales y OSM no cubre todos los edificios. No se afirma una reconstrucción exacta ni un mínimo de FPS en todos los equipos. Los puentes/túneles con niveles no resueltos se conservan en datos y se omiten del recorrido. Véanse README y `data-format.md`.

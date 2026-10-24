@@ -2,8 +2,8 @@
 
 ## Arquitectura
 - Aplicación estática ES modules, Three.js WebGPURenderer y TSL. Sin frameworks.
-- `new-york.html` conserva la experiencia original; `js/main.js` y módulos NYC siguen independientes.
-- `index.html` y `js/uruapan/` implementan Uruapan. Ejes: X este, Y arriba, Z sur; 1 unidad = 1 metro.
+- El proyecto contiene únicamente Uruapan. `js/main.js` carga `js/uruapan/main.js`. La ruta histórica `new-york.html` sólo redirige al inicio; no contiene otro simulador.
+- `index.html`, `js/uruapan/` y los componentes compartidos de `js/` implementan Uruapan. Ejes: X este, Y arriba, Z sur; 1 unidad = 1 metro.
 - El motor publicado es un snapshot dev exacto: `tools/vendor-three.mjs` y `tools/three-integrity.json`. Requiere red sólo en el primer build, después usa `.cache/three/`. No cambiar el snapshot sin pruebas GPU completas.
 - `tools/fetch-uruapan.mjs` descarga OSM sólo durante preparación. `tools/build-uruapan.mjs` valida y genera sectores estáticos en `data/uruapan/`.
 - Separar datos, generación visual, simulación, controladores, mapa y UI. Reutilizar modelos y controles del motor original.
@@ -19,7 +19,8 @@
 
 ## Comandos
 - `npm ci`, `npm run build`, `npm run dev` (http://localhost:4173/slop-uruapan/).
-- `npm test`: pruebas originales y geográficas. Pruebas heredadas Bash se omiten en Windows.
+- `npm test`: pruebas del motor y geografía de Uruapan; no requiere Bash ni omite casos en Windows.
+- `npm run check:static`: valida módulos, sectores, licencias y ausencia de datos de otra ciudad en el paquete.
 - `npm run test:browser`: Playwright sobre el servidor local, capturas y controles reales.
 - `npm run osm:fetch -- --bbox=19.410,-102.078,19.435,-102.048` y `npm run osm:build`.
 
@@ -28,5 +29,6 @@
 - No conectar puentes y túneles por cruces geométricos; usar nodos OSM y nivel.
 - Mantener reproducible la generación desde el snapshot original. Red sólo en descarga, nunca Overpass en runtime.
 - Liberar geometrías de sectores descargados y mantener colisiones aunque no estén dibujados.
-- Uruapan usa salida de color simple: eliminar MRT de materiales del G-buffer NYC al adaptar actores. No ejecutar render mientras se precompilan los shaders.
-- Verificar entradas NYC/Uruapan, rutas de subdirectorio, cámaras, movimiento y vehículos en navegador cuando esté disponible.
+- Uruapan usa salida de color simple; sus materiales no deben escribir en un G-buffer de reflejos. No ejecutar render mientras se precompilan los shaders.
+- Verificar Uruapan, la redirección histórica, rutas de subdirectorio, cámaras, movimiento y vehículos en navegador cuando esté disponible.
+- No reintroducir datos, cámaras ni lógica geográfica de otra ciudad. Conservar las atribuciones y LICENSE del motor de Mr.doob.

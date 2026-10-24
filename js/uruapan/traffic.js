@@ -3,7 +3,7 @@ import { BODY_SPECS,buildCarGeometry,createLoftedCarMaterial } from '../actor-mo
 import { PersonCrowd,PersonRig } from '../pedestrians.js';
 import { inFeature } from './geo.js';
 
-// State follows directed OSM edges; no Manhattan road tables or geometric crossing joins.
+// State follows directed OSM edges; sin cuadrículas ajenas ni conexiones por cruces geométricos.
 export class GraphAgent{
   constructor(graph,edge,index=0){this.graph=graph;this.edge=edge;this.t=0;this.index=index;this.wait=0;this.steps=0;this.previous=null;this.x=0;this.z=0;this.heading=0;}
   advance(distance,reservations=null,now=0){

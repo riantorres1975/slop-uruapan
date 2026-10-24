@@ -11,7 +11,11 @@ for (const name of ['dist', 'vendor']) {
   await rm(target,{recursive:true,force:true});
 }
 await mkdir(new URL('../vendor/', import.meta.url), { recursive: true });
-await cp(engine,new URL('../vendor/three/',import.meta.url),{recursive:true});
+for(const file of engine.files){
+  const destination=new URL(`../vendor/three/${file}`,import.meta.url);
+  await mkdir(new URL('./',destination),{recursive:true});
+  await cp(resolve(engine.directory,file),destination);
+}
 await mkdir(new URL('../dist/', import.meta.url), { recursive: true });
 for (const name of ['index.html', 'new-york.html', 'css', 'js', 'data', 'vendor', 'LICENSE']) {
   await cp(`${root}${name}`, `${root}dist/${name}`, { recursive: true });

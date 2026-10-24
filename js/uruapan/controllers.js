@@ -1,5 +1,5 @@
 import { ThirdPersonControllerManager } from '../controllers.js';
-import { closestPoint, nearestNode } from './geo.js';
+import { closestPoint } from './geo.js';
 
 export function nearestRoadPosition(data,x,z){
   let best=null,distance=Infinity;
@@ -12,9 +12,6 @@ export class UruapanControllers extends ThirdPersonControllerManager{
   constructor(scene,data,terrain){
     const colliders=data.buildings.map(b=>({...b.bounds,ring:b.ring,holes:b.holes,minY:terrain.sample((b.bounds.minX+b.bounds.maxX)/2,(b.bounds.minZ+b.bounds.maxZ)/2)+.16,maxY:terrain.sample((b.bounds.minX+b.bounds.maxX)/2,(b.bounds.minZ+b.bounds.maxZ)/2)+.16+b.height}));
     super(scene,colliders,{bounds:data.bounds,groundHeight:(x,z)=>terrain.sample(x,z)+.16});
-    // NYC decals target its SSR G-buffer. Uruapan uses a single color attachment.
-    // Keeping a normal/metalRough-only MRT node here creates an empty WGSL output struct.
-    scene.traverse(object=>{for(const material of [object.material].flat()){if(material?.mrtNode){material.mrtNode=null;material.needsUpdate=true;}}});
     this.data=data;this.terrain=terrain;
     // The original models are retained; all positions, bounds and terrain are local to Uruapan.
     for(const e of Object.values(this.entities))e.position.set(100000,1000,100000);

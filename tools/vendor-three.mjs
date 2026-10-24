@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { readdir,readFile,writeFile,mkdir } from 'node:fs/promises';
-import { resolve,dirname,relative,sep } from 'node:path';
+import { resolve,dirname,sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const revision='5e6eee6ce8757abde7105aba35a358feac986e91';
@@ -32,5 +32,5 @@ export async function vendorThree(){
   if(expected){for(const [path,hash] of Object.entries(hashes))if(expected.files[path]!==hash)throw new Error(`Integridad de Three no verificada: ${path}. Revisa la actualización explícitamente.`);}
   else await writeFile(integrityFile,JSON.stringify({revision,license:'MIT',source:base,files:Object.fromEntries(Object.entries(hashes).sort())},null,2)+'\n');
   console.log(`Three.js dev fijado: ${revision.slice(0,8)}, ${seen.size} archivos verificados`);
-  return cache;
+  return { directory:cache, files:[...seen] };
 }

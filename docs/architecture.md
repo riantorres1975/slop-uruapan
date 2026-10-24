@@ -1,29 +1,37 @@
-# Arquitectura y decisiones
+# Arquitectura de SLOP URUAPAN
 
-La inspección inicial cubrió el inventario de todos los módulos JS, herramientas y pruebas, sus imports y exports y los puntos de integración. El original usa módulos nativos sin build, WebGPURenderer, materiales TSL, modelos procedurales, controlador con colisiones y gravedad, cámaras, tráfico, audio y mapa Canvas. La geografía de Nueva York está acoplada a `city-config`, `road-network`, `city-grid` y `nyc-map`; no se reutiliza esa cuadrícula para México.
+Aplicación estática de módulos ES, Three.js WebGPURenderer y TSL. El repositorio contiene un único simulador: Uruapan. La entrada `index.html` carga `js/main.js`, que delega en `js/uruapan/main.js`. La ruta histórica `new-york.html` sólo redirige al inicio para conservar enlaces existentes.
 
-Uruapan conserva el motor Three.js y reutiliza los modelos, rig de peatones y controles originales mediante adaptadores. Su red y sus superficies provienen de OSM; el original sigue accesible desde `new-york.html`. Ambas entradas sirven el build y los addons dev que requiere el original, fijados al commit `5e6eee6ce8757abde7105aba35a358feac986e91`. El build descarga desde jsDelivr los módulos necesarios a `.cache/three/`, verifica sus hashes contra `tools/three-integrity.json` y los copia al sitio. No hay dependencia del CDN de Three.js durante la ejecución. El paquete npm Three.js se usa para ejecutar los tests Node, no como motor publicado.
+## Geografía real
 
-El pipeline de Uruapan se ejecuta offline: Overpass → snapshot validado → proyección local métrica → polígonos/red dirigida → manifiesto y sectores. Runtime descarga únicamente archivos estáticos del mismo sitio. Cada sector tiene su propio ciclo de carga, creación y liberación. Los datos de colisión permanecen disponibles fuera del radio visual.
+El pipeline se ejecuta antes de publicar: Overpass → snapshot validado → proyección local métrica → polígonos y red dirigida → manifiesto y sectores estáticos. En ejecución no se consulta Overpass.
 
-Ejes geográficos: X este, Z sur, Y arriba. Origen 19.42112, -102.06382. DEM opcional en rejilla; sin fuente fiable la altura base es cero, marcada en pantalla y documentación. Puentes/túneles conservan sus etiquetas; requieren elevación real para un soporte completo.
+Ejes: X este, Y arriba, Z sur; una unidad equivale a un metro. Origen: 19.42112, -102.06382. El mapa, las rutas, el tráfico y las colisiones utilizan únicamente las calles y huellas de Uruapan. Sin DEM fiable, el terreno permanece plano y se identifica como provisional.
 
-## Módulos de Uruapan
+## Módulos
 
 | Módulo | Responsabilidad |
 | --- | --- |
-| `geo.js` | Proyección, geometría, alturas y búsqueda de rutas |
-| `world.js` | Extrusiones de huellas, fachadas instanciadas, árboles, pavimento, tiles y ciclo de vida de sectores |
-| `terrain.js` | Interfaz de altura y validación de rejillas DEM; runtime plano |
-| `controllers.js` | Adaptación de los controladores originales a límites, suelos y puntos de aparición locales |
-| `cameras.js` | Seguimiento original, primera persona, aérea y libre; protección de cámara contra edificios |
-| `traffic.js` | Agentes sobre aristas OSM dirigidas, reservas de cruces, seguimiento básico, peatones con rig original y presupuesto dinámico |
-| `map.js` | Canvas 2D, orientación con cámara, calles, POI, minimapa, mapa ampliado y rutas |
-| `landmarks.js` | Registro de prioridades OSM y función de carga futura de GLB |
-| `main.js` | Inicialización, iluminación, interfaz en español, controles y bucle |
+| `js/uruapan/geo.js` | Proyección, polígonos con huecos, alturas y rutas |
+| `js/uruapan/world.js` | Huellas extruidas, fachadas, árboles, pavimento y ciclo de sectores |
+| `js/uruapan/terrain.js` | Muestreador de alturas; rejillas con fuente y datum obligatorios |
+| `js/uruapan/controllers.js` | Inyección de límites y suelo del manifiesto, aparición y entrada/salida |
+| `js/uruapan/cameras.js` | Cinco cámaras de Uruapan: seguimiento, exterior, cabina, aérea y libre |
+| `js/uruapan/traffic.js` | Agentes sobre aristas OSM dirigidas, cruces y presupuesto dinámico |
+| `js/uruapan/map.js` | Minimap, mapa ampliado, nombres reales, destinos y GPS |
+| `js/uruapan/landmarks.js` | Sitios identificados en OSM y puntos de integración de GLB |
+| `js/controllers.js` | Movimiento, vehículos y colisiones; requiere un mundo con límites y suelo inyectados |
+| `js/cameras.js` | Cámaras de seguimiento sin posiciones escénicas geográficas fijas |
+| `js/actor-models.js`, `js/pedestrians.js` | Modelos y rigs procedurales compartidos, adaptados del motor de Mr.doob |
+| `js/tsl-materials.js` | Uniformes, pintura y sombra de contacto; sin geografía ni G-buffer externo |
+| `js/city-config.js` | Utilidades de entrada; no contiene calles, límites ni edificios |
 
-`js/controllers.js` recibe un tercer argumento opcional `world`. La entrada NYC no lo pasa y conserva los límites y colisiones originales. Para Uruapan se añaden huellas poligonales con huecos y alturas; el automóvil usa un radio conservador alrededor de su carrocería para estas huellas. Las colisiones se consultan en una rejilla espacial heredada. No se eliminan colliders cuando se descarga un sector visual.
+La configuración geográfica de la ciudad anterior, sus generadores, datos, mapas y shaders específicos se retiraron del árbol actual. El historial Git conserva el código original. La atribución de Mr.doob y la licencia MIT se mantienen.
 
-Los shaders se precompilan antes de iniciar el bucle para no superponer modificaciones del estado del renderer. Los materiales de sombra de contacto originales incluyen `mrtNode` dirigido al G-buffer de reflejos de NYC. El adaptador de Uruapan elimina ese MRT en sus actores, porque esta entrada sólo usa un attachment de color; conservarlo generaba una estructura WGSL vacía y pipelines inválidos. Las pruebas capturan tanto excepciones como errores de consola de GPU.
+## Renderizado y rendimiento
 
-La geometría estática se fusiona por material dentro de cada sector; ventanas, puertas, balcones, luminarias y vegetación usan instancias. Los detalles de fachadas se ocultan a más de 200 m, el crowd usa su LOD original y el número de agentes se adapta cada dos segundos de reloj. No hay un objetivo de 60 FPS demostrado para todos los equipos.
+El snapshot de Three.js se fija al commit `5e6eee6ce8757abde7105aba35a358feac986e91`. El build descarga y verifica hashes, y publica sólo los módulos necesarios. La aplicación resuelve 23 módulos propios/del motor y 223 sectores estáticos; no importa otro mapa.
+
+Los shaders se precompilan antes de iniciar el bucle. La salida es de color simple. La geometría estática se fusiona por material dentro de cada sector, con instancias para fachadas y vegetación. Se cancelan solicitudes fuera del radio, se liberan geometrías e instancias al descargar sectores y se mantienen los índices de colisión. Los detalles de fachada se ocultan a más de 200 m y la población se adapta al rendimiento.
+
+WebGPU se utiliza de forma preferente. `?renderer=webgl&quality=low&resolution=0.65` activa el modo compatible, también disponible si falla el arranque. El perfil ligero desactiva sombras y antialias desde el inicio.

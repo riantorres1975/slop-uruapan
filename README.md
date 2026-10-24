@@ -111,7 +111,7 @@ Playwright usa Microsoft Edge en Windows; en Linux instala Chromium con `npx pla
 
 ## Publicación en GitHub Pages
 
-El workflow `.github/workflows/pages.yml` prueba Windows/Linux, construye el sitio, ejecuta las pruebas de Uruapan en Chromium actualizado con WebGL2 y el perfil ligero en el ejecutor Linux y publica **sólo `dist/`** con GitHub Pages. Se activa con pushes a `feat/uruapan` o `main`, o manualmente. WebGPU, calidad media y la validación visual completa de NYC se prueban localmente en Edge. Playwright debe mantenerse compatible con las APIs del snapshot Three.js; Chromium 141 no aceptaba su descriptor de textura y el backend WebGPU por software perdió el dispositivo en el ejecutor Linux.
+El workflow `.github/workflows/pages.yml` prueba Windows/Linux, construye el sitio, verifica el grafo de módulos y todos los sectores desde `/slop-uruapan/` y publica **sólo `dist/`** con GitHub Pages. Se activa con pushes a `feat/uruapan` o `main`, o manualmente. Las ocho pruebas visuales, incluyendo WebGPU, WebGL2 y NYC, se ejecutaron localmente en Edge. La GPU virtual del ejecutor Linux perdió el dispositivo; esa verificación gráfica remota no se declara aprobada ni bloquea la publicación del paquete ya probado en Windows. Playwright debe mantenerse compatible con las APIs del snapshot Three.js; Chromium 141 no aceptaba su descriptor de textura.
 
 En el fork, configura **Settings → Pages → Source: GitHub Actions**. Tras un workflow aprobado, la URL es:
 

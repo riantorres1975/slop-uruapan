@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node tools/serve.mjs",
     "build": "node tools/build-site.mjs",
+    "check:static": "node tools/check-static-site.mjs",
     "test": "node --test tests/*.test.cjs tests/*.test.mjs",
     "test:browser": "playwright test",
     "osm:fetch": "node tools/fetch-uruapan.mjs",

@@ -22,6 +22,8 @@ Playwright ejecuta carga de Uruapan sin errores de JS/GPU, caminar/saltar/colisi
 
 El primer intento de CI encontró un Chromium 141 incompatible con el descriptor de textura del Three.js original. Playwright se actualizó a 1.64.1. El perfil ligero de CI usa resolución 65 % y sin sombras; la prueba local por defecto conserva calidad media y resolución 100 %. La [medición local](benchmark.json) registró 100 FPS en cuatro muestras de la escena inicial a 1080p, con 32 sectores y 189 geometrías; no certifica otras zonas ni equipos.
 
+La GPU virtual Linux también perdió el dispositivo en Chromium actualizado. Los intentos gráficos remotos fallaron o se cancelaron: no se cuentan como aprobados. La publicación utiliza Node en ambos sistemas y `npm run check:static`, que verifica que los imports de ambas entradas, sectores y licencias existen dentro del subdirectorio de Pages. Las ocho pruebas gráficas aprobadas son las locales de Edge. El modo compatible también abrió la ciudad y permitió mover al personaje en una prueba local con SwiftShader.
+
 ## Límites de la validación
 
 No se ha certificado un mínimo de FPS en hardware dedicado. El HUD mide el rendimiento real, que incluye compilación inicial y depende del adaptador GPU. No se han validado todos los navegadores, móviles, accesibilidad de cada entrada OSM, normativa vial completa, monumentos exactos ni terreno real. La vista de NYC conserva su interfaz en inglés; la interfaz propia de Uruapan está en español.

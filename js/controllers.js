@@ -80,6 +80,34 @@ function collisionBody(mode, radius, heading, margin = 0) {
 function buildingContact(c, x, y, z, body, contact) {
   if (y + body.bottom >= c.maxY || y + body.top <= (c.minY ?? 0)) return false;
   if (x + body.extX <= c.minX || x - body.extX >= c.maxX || z + body.extZ <= c.minZ || z - body.extZ >= c.maxZ) return false;
+  // Optional real OSM footprints. Keep NYC's tested OBB path as the default.
+  if (c.ring) {
+    const contains = (ring) => {
+      let hit = false;
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const a = ring[i], b = ring[j];
+        if ((a[1] > z) !== (b[1] > z) && x < (b[0] - a[0]) * (z - a[1]) / (b[1] - a[1]) + a[0]) hit = !hit;
+      }
+      return hit;
+    };
+    const within = contains(c.ring) && !(c.holes || []).some(contains);
+    let nearest = Infinity, qx = x, qz = z;
+    for (const ring of [c.ring, ...(c.holes || [])]) for (let i = 0; i < ring.length; i++) {
+      const a = ring[i], b = ring[(i + 1) % ring.length], dx = b[0] - a[0], dz = b[1] - a[1];
+      const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz || 1)));
+      const px = a[0] + dx * t, pz = a[1] + dz * t, d = Math.hypot(x - px, z - pz);
+      if (d < nearest) { nearest = d; qx = px; qz = pz; }
+    }
+    const radius = body.car ? Math.hypot(body.hx, body.hz) : body.radius;
+    if (!within && nearest >= radius) return false;
+    if (contact) {
+      const sign = within ? -1 : 1, d = Math.max(nearest, 0.0001);
+      contact.nx = (x - qx) / d * sign; contact.nz = (z - qz) / d * sign;
+      if (nearest < 0.0001) { contact.nx = 1; contact.nz = 0; }
+      contact.depth = within ? radius + nearest : radius - nearest;
+    }
+    return true;
+  }
   const o = c.obb;
   const cs = o ? o.cs : 1, sn = o ? o.sn : 0;
   const hx = o ? o.hx : (c.maxX - c.minX) * 0.5;
@@ -182,8 +210,9 @@ function createNYLicensePlateTexture() {
 }
 
 class ThirdPersonControllerManager {
-  constructor(scene, colliders = []) {
+  constructor(scene, colliders = [], world = null) {
     this.scene = scene;
+    this.world = world;
     this.colliders = colliders;
     this._colliderCells = null; // built on first use, see nearColliders()
     this.activeMode = 'car'; // 'person' | 'car' | 'cyclist' | 'helicopter'
@@ -324,6 +353,9 @@ class ThirdPersonControllerManager {
     return this.entities[this.activeMode];
   }
 
+  getDefaultBounds() { return ISLAND_BOUNDS; }
+  getDefaultShore() { return getIslandBoundsAtZ; }
+
   teleportActiveTo(x, z, heading = Math.PI, savedAltitude = null) {
     const ent = this.getActiveEntity();
     this.resetInput();
@@ -367,6 +399,8 @@ class ThirdPersonControllerManager {
   // Find a fully clear arrival before moving the player. Sequential collision pushes can leave a player trapped
   // between overlapping buildings, so test whole candidate footprints instead; retain the old position if none fits.
   findTeleportPosition(x, z, heading, altitude) {
+    const ISLAND_BOUNDS = this.world?.bounds || this.getDefaultBounds();
+    const getIslandBoundsAtZ = this.world ? null : this.getDefaultShore();
     if (!Number.isFinite(x) || !Number.isFinite(z)) return null;
     const heli = this.activeMode === 'helicopter';
     const radius = heli ? 4.5 : this.activeMode === 'person' ? 0.48 : 0.65;
@@ -832,6 +866,7 @@ class ThirdPersonControllerManager {
   }
 
   getGroundHeight(x, z, mode = 'person') {
+    if (this.world) return this.world.groundHeight(x, z, mode);
     // Inside Central Park (5th Ave to Central Park West, 59th St to 110th St)
     const cp = CENTRAL_PARK_BOUNDS;
     if (x > cp.minX && x < cp.maxX && z > cp.minZ && z < cp.maxZ) {
@@ -888,6 +923,8 @@ class ThirdPersonControllerManager {
   }
 
   resolveHorizontalCollision(pos, radius, carEntity = null, entity = carEntity) {
+    const ISLAND_BOUNDS = this.world?.bounds || this.getDefaultBounds();
+    const getIslandBoundsAtZ = this.world ? null : this.getDefaultShore();
     // The detailed island (the helicopter may roam out over the harbour & the boroughs)
     const heli = this.activeMode === 'helicopter';
     const m = heli ? 6000 : 0;
@@ -1002,7 +1039,7 @@ class ThirdPersonControllerManager {
 
     if (this.activeMode === 'person') {
       this.updatePerson(dt, elapsed);
-    } else {
+    } else if (!this.world) {
       // Keep the sidewalk pedestrian walking naturally when not actively controlled
       const p = this.entities.person;
       const walkSpeed = 1.48;

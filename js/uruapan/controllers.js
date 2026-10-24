@@ -12,13 +12,16 @@ export class UruapanControllers extends ThirdPersonControllerManager{
   constructor(scene,data,terrain){
     const colliders=data.buildings.map(b=>({...b.bounds,ring:b.ring,holes:b.holes,minY:terrain.sample((b.bounds.minX+b.bounds.maxX)/2,(b.bounds.minZ+b.bounds.maxZ)/2)+.16,maxY:terrain.sample((b.bounds.minX+b.bounds.maxX)/2,(b.bounds.minZ+b.bounds.maxZ)/2)+.16+b.height}));
     super(scene,colliders,{bounds:data.bounds,groundHeight:(x,z)=>terrain.sample(x,z)+.16});
+    // NYC decals target its SSR G-buffer. Uruapan uses a single color attachment.
+    // Keeping a normal/metalRough-only MRT node here creates an empty WGSL output struct.
+    scene.traverse(object=>{for(const material of [object.material].flat()){if(material?.mrtNode){material.mrtNode=null;material.needsUpdate=true;}}});
     this.data=data;this.terrain=terrain;
     // The original models are retained; all positions, bounds and terrain are local to Uruapan.
     for(const e of Object.values(this.entities))e.position.set(100000,1000,100000);
     const spawn=nearestRoadPosition(data,0,0);
     for(const [index,mode] of ['car','cyclist','helicopter','person'].entries()){
       super.setMode(mode);
-      const p=mode==='person'?{x:0,z:0,heading:0}:nearestRoadPosition(data,spawn.x+index*12,spawn.z+index*12);
+      const p=mode==='person'?{x:0,z:0,heading:Math.PI}:nearestRoadPosition(data,spawn.x+index*12,spawn.z+index*12);
       this.teleportActiveTo(p.x,p.z,p.heading,mode==='helicopter'?65:null);
     }
     super.setMode('person');this.poseCharacters(0);
@@ -34,7 +37,7 @@ export class UruapanControllers extends ThirdPersonControllerManager{
     for(const mesh of this.entities.person.crowd.meshes)mesh.visible=this.activeMode==='person';
   }
   home(){
-    const p=this.activeMode==='person'?{x:0,z:0,heading:0}:nearestRoadPosition(this.data,0,0);
+    const p=this.activeMode==='person'?{x:0,z:0,heading:Math.PI}:nearestRoadPosition(this.data,0,0);
     this.teleportActiveTo(p.x,p.z,p.heading,this.activeMode==='helicopter'?65:null);
   }
   enterExit(){

@@ -5,7 +5,7 @@ import { inside, inFeature, closestPoint } from './geo.js';
 const palette = [0xe7cfad,0xc89576,0xdacdc0,0xd1ad67,0xc9d2c4,0xc57c62,0xe4ddd1,0x98a7ac];
 export function createMaterials() {
   const standard = color => new THREE.MeshStandardNodeMaterial({ color, roughness:0.92 });
-  return { walls:palette.map(standard),road:standard(0x454d50),sidewalk:standard(0xb8b1a3),plaza:standard(0xc6b99e),green:standard(0x608364),water:standard(0x427d88),roof:standard(0x937f69),glass:standard(0x30484d),door:standard(0x624c3d),trunk:standard(0x6c5542),leaf:standard(0x3d694f),metal:standard(0x445551),light:new THREE.MeshBasicNodeMaterial({color:0xffdf99}) };
+  return { walls:palette.map(standard),ground:standard(0xb4ae9c),road:standard(0x454d50),sidewalk:standard(0xb8b1a3),plaza:standard(0xc6b99e),green:standard(0x608364),water:standard(0x427d88),roof:standard(0x937f69),glass:standard(0x30484d),door:standard(0x624c3d),trunk:standard(0x6c5542),leaf:standard(0x3d694f),metal:standard(0x445551),light:new THREE.MeshBasicNodeMaterial({color:0xffdf99}) };
 }
 function shapeOf(feature) {
   // Shape XY is mapped to world X/-Z by rotation; this keeps upward normals.
@@ -29,8 +29,9 @@ function batchInstances(group,geometry,material,transforms,name) {
   transforms.forEach((t,i)=>{dummy.position.set(...t.p);dummy.rotation.set(0,t.r || 0,0);dummy.scale.set(...t.s);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);});
   mesh.instanceMatrix.needsUpdate=true;mesh.computeBoundingSphere();mesh.castShadow=true;mesh.receiveShadow=true;group.add(mesh);
 }
-export function buildSector(data,materials,terrain) {
+export function buildSector(data,materials,terrain,size=240) {
   const group=new THREE.Group();group.name=`Sector ${data.id}`;
+  const tile=new THREE.PlaneGeometry(size,size,8,8);tile.rotateX(-Math.PI/2);tile.translate((data.x+.5)*size,0,(data.z+.5)*size);const positions=tile.attributes.position;for(let i=0;i<positions.count;i++)positions.setY(i,terrain.sample(positions.getX(i),positions.getZ(i))-.02);tile.computeVertexNormals();const ground=new THREE.Mesh(tile,materials.ground);ground.receiveShadow=true;group.add(ground);
   const batches=new Map(), windows=[],doors=[],balconies=[],trunks=[],leaves=[],poles=[],lamps=[];
   const add=(g,m)=>{if(!batches.has(m))batches.set(m,[]);batches.get(m).push(g);};
   for(const road of data.roads) {
@@ -80,21 +81,26 @@ export function buildSector(data,materials,terrain) {
   return group;
 }
 export class SectorManager {
-  constructor(scene,manifest,base,terrain){this.scene=scene;this.manifest=manifest;this.base=base;this.terrain=terrain;this.materials=createMaterials();this.loaded=new Map();this.pending=new Set();this.radius=600;this.generation=0;this.errors=[];}
+  constructor(scene,manifest,base,terrain){this.scene=scene;this.manifest=manifest;this.base=base;this.terrain=terrain;this.materials=createMaterials();this.loaded=new Map();this.pending=new Set();this.requests=new Map();this.retryAfter=new Map();this.radius=600;this.errors=[];this.disposed=false;this.evicted=0;}
+  release(group){this.scene.remove(group);group.traverse(o=>{o.geometry?.dispose();if(o.isInstancedMesh)o.dispose();});}
   async update(position) {
+    if(this.disposed)return;
     this.focus={x:position.x,z:position.z};
     const size=this.manifest.sectorSize,wanted=new Set();
     const near=this.manifest.sectors.filter(s=>Math.hypot((s.x+0.5)*size-position.x,(s.z+0.5)*size-position.z)<this.radius+size);
     near.sort((a,b)=>Math.hypot((a.x+.5)*size-position.x,(a.z+.5)*size-position.z)-Math.hypot((b.x+.5)*size-position.x,(b.z+.5)*size-position.z));
     near.forEach(s=>wanted.add(s.id));this.wanted=wanted;
-    for(const [id,group] of this.loaded)if(!wanted.has(id)){this.scene.remove(group);group.traverse(o=>o.geometry?.dispose());this.loaded.delete(id);}
-    const next=near.filter(s=>!this.loaded.has(s.id)&&!this.pending.has(s.id));
+    for(const [id,controller] of this.requests)if(!wanted.has(id))controller.abort();
+    for(const [id,group] of this.loaded)if(!wanted.has(id)){this.release(group);this.loaded.delete(id);this.evicted++;}
+    for(const [id,group] of this.loaded){const sector=this.manifest.sectors.find(s=>s.id===id),far=Math.hypot((sector.x+.5)*size-position.x,(sector.z+.5)*size-position.z)>200;group.traverse(o=>{if(['Ventanas','Puertas','Balcones'].includes(o.name))o.visible=!far;});}
+    const next=near.filter(s=>!this.loaded.has(s.id)&&!this.pending.has(s.id)&&(this.retryAfter.get(s.id)||0)<performance.now());
     await Promise.all(next.slice(0,Math.max(0,3-this.pending.size)).map(async s=>{
       this.pending.add(s.id);
-      try{const response=await fetch(new URL(s.url,this.base));if(!response.ok)throw new Error(`Sector ${s.id}: HTTP ${response.status}`);const data=await response.json();if(!this.wanted.has(s.id))return;const group=buildSector(data,this.materials,this.terrain);this.scene.add(group);this.loaded.set(s.id,group);}
-      catch(e){this.errors.push(e.message);console.error(e);}
-      finally{this.pending.delete(s.id);}
+      const controller=new AbortController();this.requests.set(s.id,controller);
+      try{const response=await fetch(new URL(s.url,this.base),{signal:controller.signal});if(!response.ok)throw new Error(`Sector ${s.id}: HTTP ${response.status}`);const data=await response.json();if(this.disposed||!this.wanted.has(s.id))return;const group=buildSector(data,this.materials,this.terrain,this.manifest.sectorSize);this.scene.add(group);this.loaded.set(s.id,group);this.retryAfter.delete(s.id);}
+      catch(e){if(e.name!=='AbortError'){this.errors.push(e.message);this.retryAfter.set(s.id,performance.now()+15000);console.error(e);}}
+      finally{this.pending.delete(s.id);this.requests.delete(s.id);}
     }));
   }
-  dispose(){for(const group of this.loaded.values()){this.scene.remove(group);group.traverse(o=>o.geometry?.dispose());}this.loaded.clear();for(const m of Object.values(this.materials).flat())m.dispose();}
+  dispose(){this.disposed=true;for(const request of this.requests.values())request.abort();for(const group of this.loaded.values())this.release(group);this.loaded.clear();for(const m of Object.values(this.materials).flat())m.dispose();}
 }

@@ -1,6 +1,6 @@
 // Optional verified elevation grid, stored relative to an explicit vertical datum.
 export class Terrain {
-  constructor(grid=null){this.grid=grid;if(grid){if(!grid.source||!grid.datum||!Number.isFinite(grid.step)||grid.step<=0||grid.width<2||grid.height<2||grid.values.length!==grid.width*grid.height||!grid.values.every(Number.isFinite))throw new Error('DEM inválido o sin procedencia');}}
+  constructor(grid=null){this.grid=grid;if(grid){if(!grid.source||!grid.datum||![grid.step,grid.minX,grid.minZ,grid.baseElevation].every(Number.isFinite)||grid.step<=0||!Number.isSafeInteger(grid.width)||!Number.isSafeInteger(grid.height)||grid.width<2||grid.height<2||!Array.isArray(grid.values)||grid.values.length!==grid.width*grid.height||!grid.values.every(Number.isFinite))throw new Error('DEM inválido o sin procedencia');}}
   sample(x,z){
     const g=this.grid;if(!g)return 0;
     const fx=(x-g.minX)/g.step,fz=(z-g.minZ)/g.step;

@@ -24,7 +24,7 @@ export class GraphAgent{
 }
 export class UruapanTraffic{
   constructor(scene,data,terrain){
-    this.data=data;this.terrain=terrain;this.cars=[];this.walkers=[];this.reservations=new Map();this.targetCars=24;this.targetPeople=28;this.fpsAverage=60;this.frame=0;this.nextAdjust=0;
+    this.data=data;this.terrain=terrain;this.cars=[];this.walkers=[];this.reservations=new Map();this.maxCars=24;this.maxPeople=28;this.targetCars=24;this.targetPeople=28;this.fpsAverage=60;this.frame=0;this.nextAdjust=0;
     const graph=data.graph,walk=data.walkGraph;
     const sorted=(g)=>g.edges.map((e,i)=>({i,d:Math.hypot(...g.nodes[e.from].point)})).sort((a,b)=>a.d-b.d).map(e=>e.i);
     const edges=sorted(graph),walking=sorted(walk);
@@ -39,8 +39,9 @@ export class UruapanTraffic{
   }
   relocate(actor,focus){const choices=[];for(let i=0;i<actor.graph.edges.length;i++){const p=actor.graph.nodes[actor.graph.edges[i].from].point,d=Math.hypot(p[0]-focus.x,p[1]-focus.z);if(d>40&&d<320)choices.push(i);}if(choices.length){actor.edge=choices[(actor.index*17+this.frame)%choices.length];actor.t=0;actor.locate();}}
   update(dt,elapsed,focus,rawDt,player){
-    this.frame++;this.fpsAverage+=(1/Math.max(.001,rawDt)-this.fpsAverage)*.02;
-    if(elapsed>this.nextAdjust){this.nextAdjust=elapsed+5;this.targetCars=this.fpsAverage<25?10:this.fpsAverage<40?18:24;this.targetPeople=this.fpsAverage<25?12:this.fpsAverage<40?20:28;for(const [key,reservation] of this.reservations)if(reservation.until<elapsed)this.reservations.delete(key);}
+    this.frame++;this.fpsAverage+=(1/Math.max(.001,rawDt)-this.fpsAverage)*(1-Math.exp(-rawDt*1.5));
+    const clock=performance.now()/1000;
+    if(clock>this.nextAdjust){this.nextAdjust=clock+2;this.targetCars=Math.min(this.maxCars,this.fpsAverage<25?10:this.fpsAverage<40?18:40);this.targetPeople=Math.min(this.maxPeople,this.fpsAverage<25?12:this.fpsAverage<40?20:48);for(const [key,reservation] of this.reservations)if(reservation.until<elapsed)this.reservations.delete(key);}
     let count=0;
     for(const actor of this.cars.slice(0,this.targetCars)){
       const distance=Math.hypot(actor.x-focus.x,actor.z-focus.z);if(distance>750){if(this.frame%30===actor.index%30)this.relocate(actor,focus);continue;}
@@ -57,7 +58,7 @@ export class UruapanTraffic{
     this.crowd.begin();
     for(const actor of this.walkers.slice(0,this.targetPeople)){
       const distance=Math.hypot(actor.x-focus.x,actor.z-focus.z);if(distance>600){if(this.frame%30===actor.index%30)this.relocate(actor,focus);continue;}
-      if(distance>180&&this.frame%3!==actor.index%3){this.crowd.add(actor.rig,distance);continue;}
+      if(actor.rig.placed&&distance>180&&this.frame%3!==actor.index%3){this.crowd.add(actor.rig,distance);continue;}
       const step=dt*(distance>180?3:1),edge=actor.graph.edges[actor.edge];actor.advance((1.1+actor.index%3*.2)*step);actor.locate(edge.width/2+.9);
       if(this.data.buildings.some(b=>inFeature(b,actor.x,actor.z)))continue;
       actor.rig.update(step,actor.x,actor.z,actor.heading,this.ground,null,0);this.crowd.add(actor.rig,distance);

@@ -1,4 +1,6 @@
 import { test,expect } from '@playwright/test';
+test.beforeEach(async({page})=>{page.on('console',m=>{if(m.type()==='error')page.__gpuErrors.push(m.text());});page.__gpuErrors=[];});
+test.afterEach(async({page})=>{expect(page.__gpuErrors,'La consola de GPU debe estar libre de errores').toEqual([]);});
 test('Uruapan carga datos y geometrías reales sin errores',async({page})=>{
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('./');await page.waitForFunction(()=>window.uruapan?.ready,{timeout:120000});
@@ -40,4 +42,14 @@ test('Nueva York original inicia con el motor fijado',async({page})=>{
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('new-york.html');await expect(page.locator('#loading-overlay')).toHaveClass(/hidden/,{timeout:150000});
   expect(errors).toEqual([]);await page.screenshot({path:'docs/screenshots/new-york.png'});
+});
+test('sectores descargan memoria, vuelven a cargar y soportan 1440p',async({page})=>{
+  await page.setViewportSize({width:2560,height:1440});await page.goto('./');await page.waitForFunction(()=>window.uruapan?.ready);await page.locator('#start').click();
+  await page.evaluate(()=>{uruapan.sectors.radius=360;uruapan.controllers.teleportActiveTo(-900,-650,0);});
+  await expect.poll(()=>page.evaluate(()=>uruapan.sectors.evicted)).toBeGreaterThan(0);await expect.poll(()=>page.evaluate(()=>uruapan.sectors.pending.size)).toBe(0);
+  const ids=await page.evaluate(()=>[...uruapan.sectors.loaded.keys()]);await page.locator('#home').click();await expect.poll(()=>page.evaluate(old=>[...uruapan.sectors.loaded.keys()].some(id=>!old.includes(id)),ids)).toBe(true);
+  const state=await page.evaluate(()=>({loaded:uruapan.sectors.loaded.size,pending:uruapan.sectors.pending.size,errors:uruapan.sectors.errors}));expect(state.loaded).toBeLessThan(50);expect(state.pending).toBeLessThanOrEqual(3);expect(state.errors).toEqual([]);await page.screenshot({path:'docs/screenshots/uruapan-1440p.png'});
+});
+test('fallback WebGL2 dibuja la ciudad sin errores de shader',async({page})=>{
+  await page.addInitScript(()=>Object.defineProperty(navigator,'gpu',{value:undefined}));await page.goto('./');await page.waitForFunction(()=>window.uruapan?.ready);await page.locator('#start').click();await expect(page.locator('#renderer-label')).toHaveText('WEBGL2');await expect.poll(()=>page.evaluate(()=>uruapan.renderer.info.render.triangles)).toBeGreaterThan(0);await page.locator('[data-mode="car"]').click();await page.keyboard.press('v');await page.screenshot({path:'docs/screenshots/uruapan-webgl2.png'});
 });
